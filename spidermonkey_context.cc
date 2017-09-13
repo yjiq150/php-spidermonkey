@@ -307,7 +307,8 @@ PHP_METHOD(JSContext, getVersionString)
 	version_str = JS_VersionToString((JSVersion)version);
 	l = strlen(version_str);
 
-	RETVAL_STRINGL(estrndup(version_str, l), l, 0);
+	RETVAL_STRINGL(estrndup(version_str, l), l);
+	// RETVAL_STRINGL(estrndup(version_str, l), l, 0);
 }
 /* }}} */
 

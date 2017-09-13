@@ -77,8 +77,10 @@ zend_function_entry php_spidermonkey_jsc_functions[] = {
 
 static zend_object_handlers jscontext_object_handlers;
 
-static void php_jscontext_object_free_storage(void *object TSRMLS_DC)
+//static void php_jscontext_object_free_storage(void *object TSRMLS_DC)
+static void php_jscontext_object_free_storage(zend_object *object TSRMLS_DC)
 {
+	//todo: 이거 컨버팅하면 안될거같은데...
 	php_jscontext_object *intern = (php_jscontext_object *)object;
 
 	// if a context is found ( which should be the case )
@@ -98,15 +100,13 @@ static void php_jscontext_object_free_storage(void *object TSRMLS_DC)
 	efree(object);
 }
 
-static zend_object_value php_jscontext_object_new_ex(zend_class_entry *class_type, php_jscontext_object **ptr TSRMLS_DC)
+static zend_object* php_jscontext_object_new_ex(zend_class_entry *class_type, php_jscontext_object **ptr TSRMLS_DC)
 {
 	zval *tmp;
-	zend_object_value retval;
 	php_jscontext_object *intern;
 
 	/* Allocate memory for it */
-	intern = (php_jscontext_object *) emalloc(sizeof(php_jscontext_object));
-	memset(intern, 0, sizeof(php_jscontext_object));
+	intern = (php_jscontext_object *) ecalloc(1, sizeof(php_jscontext_object) + zend_object_properties_size(class_type));
 
 	if (ptr)
 	{
@@ -179,13 +179,16 @@ static zend_object_value php_jscontext_object_new_ex(zend_class_entry *class_typ
 	/* create zend object */
 	zend_object_std_init(&intern->zo, class_type TSRMLS_CC);
 
-	retval.handle = zend_objects_store_put(intern, NULL, (zend_objects_free_object_storage_t) php_jscontext_object_free_storage, NULL TSRMLS_CC);
-	retval.handlers = (zend_object_handlers *) &jscontext_object_handlers;
+	jscontext_object_handlers.offset = XtOffsetOf(php_jscontext_object, zo);
+	jscontext_object_handlers.free_obj = php_jscontext_object_free_storage;
+
+	intern->zo.handlers = &jscontext_object_handlers;
+
 	PHPJS_END(intern->ct);
-	return retval;
+	return &intern->zo;
 }
 
-static zend_object_value php_jscontext_object_new(zend_class_entry *class_type TSRMLS_DC)
+static zend_object* php_jscontext_object_new(zend_class_entry *class_type TSRMLS_DC)
 {
 	return php_jscontext_object_new_ex(class_type, NULL TSRMLS_CC);
 }
@@ -303,7 +306,8 @@ void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Va
 			if ((len = JS_GetStringLength(str)) > 0) {
 				/* then we retrieve the pointer to the string */
 				char *txt = JS_EncodeString(ctx, str);
-				RETVAL_STRINGL(txt, strlen(txt), 1);
+				RETVAL_STRINGL(txt, strlen(txt));
+				// RETVAL_STRINGL(txt, strlen(txt), 1);
 				JS_free(ctx, txt);
 			}
 			else
