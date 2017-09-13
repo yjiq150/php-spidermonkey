@@ -367,14 +367,11 @@ void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Va
 						jsval value;
 
 						if (JS_LookupElement(ctx, obj, i, &value) == JS_TRUE) {
-							zval *fval;
-
-							/* alloc memory for this zval */
-							MAKE_STD_ZVAL(fval);
+							zval fval;
 							/* Call this function to convert a jsval to a zval */
-							jsval_to_zval(fval, ctx, JS::MutableHandleValue::fromMarkedLocation(&value));
+							jsval_to_zval(&fval, ctx, JS::MutableHandleValue::fromMarkedLocation(&value));
 							/* Add property to our array */
-							add_index_zval(return_value, i, fval);
+							add_index_zval(return_value, i, &fval);
 						}
 					}
 				}
@@ -406,14 +403,11 @@ void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Va
 					/* Try to read property */
 					if (JS_GetProperty(ctx, obj, name, &item_val) == JS_TRUE)
 					{
-						zval *fval;
-
-						/* alloc memory for this zval */
-						MAKE_STD_ZVAL(fval);
+						zval fval;
 						/* Call this function to convert a jsval to a zval */
-						jsval_to_zval(fval, ctx, JS::MutableHandleValue::fromMarkedLocation(&item_val));
+						jsval_to_zval(&fval, ctx, JS::MutableHandleValue::fromMarkedLocation(&item_val));
 						/* Add property to our stdClass */
-						add_assoc_zval(return_value, name, fval);
+						add_assoc_zval(return_value, name, &fval);
 					}
 					JS_free(ctx, name);
 				}
@@ -594,7 +588,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval TSRMLS_DC)
 				char					*key;
 				uint					keylen;
 				php_callback			cb;
-				zval					*z_fname;
+				zval					z_fname;
 
 				/* retrieve current key */
 				zend_hash_get_current_key_ex(ht, &key, &keylen, 0, 0, NULL);
@@ -605,13 +599,12 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval TSRMLS_DC)
 				}
 
 				/* store the function name as a zval */
-				MAKE_STD_ZVAL(z_fname);
-				ZVAL_STRING(z_fname, fptr->common.function_name, 1);
+				ZVAL_STRING(&z_fname, fptr->common.function_name, 1);
 
 				/* then build the zend_fcall_info and cache */
 				cb.fci.size = sizeof(cb.fci);
 				cb.fci.function_table = &ce->function_table;
-				cb.fci.function_name = z_fname;
+				cb.fci.function_name = &z_fname;
 				cb.fci.symbol_table = NULL;
 				cb.fci.object_ptr = val;
 				cb.fci.retval_ptr_ptr = NULL;
