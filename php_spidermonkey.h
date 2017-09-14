@@ -23,6 +23,18 @@
 /* Prevent double inclusion */
 #define PHP_SPIDERMONKEY_H
 
+
+#if PHP_MAJOR_VERSION < 7 
+	#define _DECLARE_ZVAL(name) zval * name
+	#define _ALLOC_INIT_ZVAL(name) ALLOC_INIT_ZVAL(name)
+	#define hp_ptr_dtor(val) zval_ptr_dtor(&val);
+#else
+	#define _DECLARE_ZVAL(name) zval name ## _v; zval * name = &name ## _v
+	#define _ALLOC_INIT_ZVAL(name) ZVAL_NULL(name)
+	#define hp_ptr_dtor(val) zval_ptr_dtor(val); 
+#endif
+
+
 /* Define Extension Properties */
 #define PHP_SPIDERMONKEY_EXTNAME	"spidermonkey"
 #define PHP_SPIDERMONKEY_MINFO_NAME "SpiderMonkey"
