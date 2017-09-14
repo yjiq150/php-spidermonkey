@@ -595,7 +595,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval TSRMLS_DC)
 				}
 
 				/* store the function name as a zval */
-				ZVAL_STRING(&z_fname, fptr->common.function_name, 1);
+				ZVAL_STRING(&z_fname, fptr->common.function_name);
 
 				/* then build the zend_fcall_info and cache */
 				cb.fci.size = sizeof(cb.fci);
