@@ -459,16 +459,12 @@ void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Va
 							/* Try to read property */
 							if (JS_GetProperty(ctx, obj, name, &item_val) == JS_TRUE)
 							{
-								zval *fval;
+								zval fval;
 
-								/* alloc memory for this zval */
-								MAKE_STD_ZVAL(fval);
 								/* Call this function to convert a jsval to a zval */
-								_jsval_to_zval(fval, ctx, JS::MutableHandleValue::fromMarkedLocation(&item_val), &jsthis TSRMLS_CC);
+								_jsval_to_zval(&fval, ctx, JS::MutableHandleValue::fromMarkedLocation(&item_val), &jsthis TSRMLS_CC);
 								/* Add property to our stdClass */
-								zend_update_property(NULL, return_value, name, strlen(name), fval TSRMLS_CC);
-								/* Destroy pointer to zval */
-								zval_ptr_dtor(&fval);
+								zend_update_property(NULL, return_value, name, strlen(name), &fval TSRMLS_CC);
 							}
 							JS_free(ctx, name);
 						}
