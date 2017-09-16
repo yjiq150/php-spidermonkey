@@ -535,7 +535,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			jsref->obj = val;
 			/* auto define functions for stream */
 			php_stream *stream;
-			php_stream_from_zval_no_verify(stream, &val);
+			php_stream_from_zval_no_verify(stream, val);
 
 			if (stream != NULL) {
 				/* set a bunch of constants */
