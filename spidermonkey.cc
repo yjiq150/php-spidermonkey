@@ -561,111 +561,112 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
 		case IS_OBJECT:
-			intern = (php_jscontext_object*)JS_GetContextPrivate(ctx);
-			/* create JSObject */
-			jobj = JS_NewObject(ctx, &intern->script_class, NULL, NULL);
+		// todo: maybe not used
+			// intern = (php_jscontext_object*)JS_GetContextPrivate(ctx);
+			// /* create JSObject */
+			// jobj = JS_NewObject(ctx, &intern->script_class, NULL, NULL);
 
-			jsref = (php_jsobject_ref*)emalloc(sizeof(php_jsobject_ref));
-			/* intern hashtable for function storage */
-			ALLOC_HASHTABLE(jsref->ht);
-			zend_hash_init(jsref->ht, 50, NULL, NULL, 0);
+			// jsref = (php_jsobject_ref*)emalloc(sizeof(php_jsobject_ref));
+			// /* intern hashtable for function storage */
+			// ALLOC_HASHTABLE(jsref->ht);
+			// zend_hash_init(jsref->ht, 50, NULL, NULL, 0);
 
-			SEPARATE_ARG_IF_REF(val);
+			// SEPARATE_ARG_IF_REF(val);
 
-			/* store pointer to object */
-			jsref->obj = val;
-			/* store pointer to HashTable */
-			JS_SetPrivate(jobj, jsref);
+			// /* store pointer to object */
+			// jsref->obj = val;
+			// /* store pointer to HashTable */
+			// JS_SetPrivate(jobj, jsref);
 
-			/* retrieve class entry */
-			ce = Z_OBJCE_P(val);
-			/* get function table */
-			ht = &ce->function_table;
+			// /* retrieve class entry */
+			// ce = Z_OBJCE_P(val);
+			// /* get function table */
+			// ht = &ce->function_table;
 			
-			/* foreach functions */
-			zend_string				*key;
-			ulong num_key;
-			zval*					z_fname;
+			// /* foreach functions */
+			// zend_string				*key;
+			// ulong num_key;
+			// zval*					z_fname;
 
-			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, key, z_fname) {
+			// ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, key, z_fname) {
 				
-				php_callback			cb;
+			// 	php_callback			cb;
 				
-				/* store the function name as a zval */
-				ZVAL_STRING(z_fname, fptr->common.function_name);
+			// 	/* store the function name as a zval */
+			// 	ZVAL_STRING(z_fname, fptr->common.function_name);
 
-				/* then build the zend_fcall_info and cache */
-				cb.fci.size = sizeof(cb.fci);
-				cb.fci.function_table = &ce->function_table;
-				cb.fci.function_name = z_fname;
-				cb.fci.symbol_table = NULL;
-				cb.fci.object_ptr = val;
-				cb.fci.retval_ptr_ptr = NULL;
-				cb.fci.param_count = fptr->common.num_args;
-				cb.fci.params = NULL;
-				cb.fci.no_separation = 1;
+			// 	/* then build the zend_fcall_info and cache */
+			// 	cb.fci.size = sizeof(cb.fci);
+			// 	cb.fci.function_table = &ce->function_table;
+			// 	cb.fci.function_name = z_fname;
+			// 	cb.fci.symbol_table = NULL;
+			// 	cb.fci.object_ptr = val;
+			// 	cb.fci.retval_ptr_ptr = NULL;
+			// 	cb.fci.param_count = fptr->common.num_args;
+			// 	cb.fci.params = NULL;
+			// 	cb.fci.no_separation = 1;
 
-				cb.fci_cache.initialized = 1;
-				cb.fci_cache.function_handler = fptr;
-				cb.fci_cache.calling_scope = ce;
-				cb.fci_cache.object_ptr = val;
+			// 	cb.fci_cache.initialized = 1;
+			// 	cb.fci_cache.function_handler = fptr;
+			// 	cb.fci_cache.calling_scope = ce;
+			// 	cb.fci_cache.object_ptr = val;
 
-				/* store them */
-				zend_hash_add(jsref->ht, fptr->common.function_name, strlen(fptr->common.function_name), &cb, sizeof(cb), NULL);
+			// 	/* store them */
+			// 	zend_hash_add(jsref->ht, fptr->common.function_name, strlen(fptr->common.function_name), &cb, sizeof(cb), NULL);
 
-				/* define the function */
-				JS_DefineFunction(ctx, jobj, fptr->common.function_name, generic_call, 1, 0);
-			} ZEND_HASH_FOREACH_END();
+			// 	/* define the function */
+			// 	JS_DefineFunction(ctx, jobj, fptr->common.function_name, generic_call, 1, 0);
+			// } ZEND_HASH_FOREACH_END();
 
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
 		case IS_ARRAY:
 			/* retrieve the array hash table */
-			ht = HASH_OF(val);
+			// ht = HASH_OF(val);
 
-			/* create JSObject */
-			jobj = JS_NewArrayObject(ctx, 0, nullptr);
+			// /* create JSObject */
+			// jobj = JS_NewArrayObject(ctx, 0, nullptr);
 
-			// prevent GC
-			JS_AddObjectRoot(ctx, &jobj);
+			// // prevent GC
+			// JS_AddObjectRoot(ctx, &jobj);
 
-			/* foreach item */
-			for(zend_hash_internal_pointer_reset(ht); zend_hash_has_more_elements(ht) == SUCCESS; zend_hash_move_forward(ht))
-			{
-				zend_string *key;
-				ulong idx;
-				int type;
-				zval **ppzval;
-				char intIdx[25];
+			// /* foreach item */
+			// for(zend_hash_internal_pointer_reset(ht); zend_hash_has_more_elements(ht) == SUCCESS; zend_hash_move_forward(ht))
+			// {
+			// 	zend_string *key;
+			// 	ulong idx;
+			// 	int type;
+			// 	zval **ppzval;
+			// 	char intIdx[25];
 
-				/* retrieve current key */
-				type = zend_hash_get_current_key_ex(ht, &key, &idx, 0, NULL);
-				if (zend_hash_get_current_data(ht) == FAILURE) {
-					/* Should never actually fail
-					 * since the key is known to exist. */
-					continue;
-				}
+			// 	/* retrieve current key */
+			// 	type = zend_hash_get_current_key_ex(ht, &key, &idx, 0, NULL);
+			// 	if (zend_hash_get_current_data(ht) == FAILURE) {
+			// 		/* Should never actually fail
+			// 		 * since the key is known to exist. */
+			// 		continue;
+			// 	}
 
-				if (type == HASH_KEY_IS_LONG)
-				{
-					//sprintf(intIdx, "%ld", idx);
-					//php_jsobject_set_property(ctx, jobj, intIdx, *ppzval);
-					jsval jarrval;
+			// 	if (type == HASH_KEY_IS_LONG)
+			// 	{
+			// 		//sprintf(intIdx, "%ld", idx);
+			// 		//php_jsobject_set_property(ctx, jobj, intIdx, *ppzval);
+			// 		jsval jarrval;
 
-					/* first convert zval to jsval */
-					zval_to_jsval(*ppzval, ctx, &jarrval);
+			// 		/* first convert zval to jsval */
+			// 		zval_to_jsval(*ppzval, ctx, &jarrval);
 
-					/* no ref behavior, just set a property */
-					//JSBool res = JS_SetProperty(ctx, obj, property_name, &jval);
-					//JSBool res = JS_SetElement(ctx, jobj, idx, &jarrval);
-					JSBool res = JS_DefineElement(ctx, jobj, idx, jarrval, nullptr, nullptr, 0);
+			// 		/* no ref behavior, just set a property */
+			// 		//JSBool res = JS_SetProperty(ctx, obj, property_name, &jval);
+			// 		//JSBool res = JS_SetElement(ctx, jobj, idx, &jarrval);
+			// 		JSBool res = JS_DefineElement(ctx, jobj, idx, jarrval, nullptr, nullptr, 0);
 
-				}
-				else
-				{
-					php_jsobject_set_property(ctx, jobj, ZSTR_VAL(key), *ppzval);
-				}
-			}
+			// 	}
+			// 	else
+			// 	{
+			// 		php_jsobject_set_property(ctx, jobj, ZSTR_VAL(key), *ppzval);
+			// 	}
+			// }
 
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
