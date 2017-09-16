@@ -517,8 +517,11 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			jstr = JS_NewStringCopyN(ctx, Z_STRVAL_P(val), Z_STRLEN_P(val));
 			jval->setString(jstr);
 			break;
-		case IS_BOOL:
-			*jval = BOOLEAN_TO_JSVAL(Z_BVAL_P(val));
+		case IS_TRUE:
+			*jval = BOOLEAN_TO_JSVAL(1);
+			break;
+		case IS_FALSE:
+			*jval = BOOLEAN_TO_JSVAL(0);
 			break;
 		case IS_RESOURCE:
 			intern = (php_jscontext_object*)JS_GetContextPrivate(ctx);
