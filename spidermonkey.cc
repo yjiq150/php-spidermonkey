@@ -590,7 +590,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 				/* retrieve current key */
 				zend_hash_get_current_key_ex(ht, &key, 0, NULL);
-				if (zend_hash_get_current_data(ht, (void**)&fptr) == FAILURE) {
+				if (zend_hash_get_current_data(ht) == FAILURE) {
 					/* Should never actually fail
 					 * since the key is known to exist. */
 					continue;
@@ -644,7 +644,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 				/* retrieve current key */
 				type = zend_hash_get_current_key_ex(ht, &key, &idx, 0, NULL);
-				if (zend_hash_get_current_data(ht, (void**)&ppzval) == FAILURE) {
+				if (zend_hash_get_current_data(ht) == FAILURE) {
 					/* Should never actually fail
 					 * since the key is known to exist. */
 					continue;

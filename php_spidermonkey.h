@@ -81,7 +81,7 @@ ZEND_END_MODULE_GLOBALS(spidermonkey)
 
 // useful for iterating on php hashtables
 #define PHPJS_FOREACH(ht) for (zend_hash_internal_pointer_reset(ht); zend_hash_has_more_elements(ht) == SUCCESS; zend_hash_move_forward(ht))
-#define PHPJS_FOREACH_ENTRY(ht,dest) if (zend_hash_get_current_data(ht,(void**)& dest) == FAILURE) {\
+#define PHPJS_FOREACH_ENTRY(ht) if (zend_hash_get_current_data(ht) == FAILURE) {\
   continue;\
 }
 

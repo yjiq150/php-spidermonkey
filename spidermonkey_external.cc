@@ -406,7 +406,7 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 
 				/* retrieve current key */
 				type = zend_hash_get_current_key_ex(jsref->ht, &key, &idx, 0, NULL);
-				if (zend_hash_get_current_data(jsref->ht, (void**)&callback) == FAILURE) {
+				if (zend_hash_get_current_data(jsref->ht) == FAILURE) {
 					/* Should never actually fail
 					* since the key is known to exist. */
 					continue;
