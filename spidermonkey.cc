@@ -581,28 +581,23 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			ce = Z_OBJCE_P(val);
 			/* get function table */
 			ht = &ce->function_table;
+			
 			/* foreach functions */
-			for(zend_hash_internal_pointer_reset(ht); zend_hash_has_more_elements(ht) == SUCCESS; zend_hash_move_forward(ht))
-			{
-				zend_string				*key;
+			zend_string				*key;
+			ulong num_key;
+			zval*					z_fname;
+
+			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, key, z_fname) {
+				
 				php_callback			cb;
-				zval					z_fname;
-
-				/* retrieve current key */
-				zend_hash_get_current_key_ex(ht, &key, 0, NULL);
-				if (zend_hash_get_current_data(ht) == FAILURE) {
-					/* Should never actually fail
-					 * since the key is known to exist. */
-					continue;
-				}
-
+				
 				/* store the function name as a zval */
-				ZVAL_STRING(&z_fname, fptr->common.function_name);
+				ZVAL_STRING(z_fname, fptr->common.function_name);
 
 				/* then build the zend_fcall_info and cache */
 				cb.fci.size = sizeof(cb.fci);
 				cb.fci.function_table = &ce->function_table;
-				cb.fci.function_name = &z_fname;
+				cb.fci.function_name = z_fname;
 				cb.fci.symbol_table = NULL;
 				cb.fci.object_ptr = val;
 				cb.fci.retval_ptr_ptr = NULL;
@@ -620,7 +615,8 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 				/* define the function */
 				JS_DefineFunction(ctx, jobj, fptr->common.function_name, generic_call, 1, 0);
-			}
+			} ZEND_HASH_FOREACH_END();
+
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
 		case IS_ARRAY:
