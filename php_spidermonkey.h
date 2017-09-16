@@ -124,10 +124,10 @@ extern zend_class_entry *php_spidermonkey_jsc_entry;
 
 /* this method defined in spidermonkey.c allow us to convert a jsval
  * to a zval for PHP use */
-void php_jsobject_set_property(JSContext *ctx, JSObject *obj, char *property_name, zval *val TSRMLS_DC);
-#define jsval_to_zval(rval, ctx, jval) _jsval_to_zval(rval, ctx, jval, NULL TSRMLS_CC)
-void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Value> rval, php_jsparent *parent TSRMLS_DC);
-void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval TSRMLS_DC);
+void php_jsobject_set_property(JSContext *ctx, JSObject *obj, char *property_name, zval *val);
+#define jsval_to_zval(rval, ctx, jval) _jsval_to_zval(rval, ctx, jval, NULL)
+void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Value> rval, php_jsparent *parent);
+void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval);
 
 /* init/shutdown functions */
 PHP_MINIT_FUNCTION(spidermonkey);

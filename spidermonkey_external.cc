@@ -31,22 +31,22 @@ void reportError(JSContext *cx, const char *message, JSErrorReport *report)
 
 	if ((report->flags & JSREPORT_WARNING) || (report->flags & JSREPORT_STRICT)) {
 		// emit a warning
-		php_error_docref(NULL TSRMLS_CC, report->flags & JSREPORT_WARNING ? E_WARNING : E_STRICT, message);
+		php_error_docref(NULL, report->flags & JSREPORT_WARNING ? E_WARNING : E_STRICT, message);
 	} else {
 		/* throw error */
-		zend_throw_exception(zend_exception_get_default(TSRMLS_C), (char *) message, report->errorNumber TSRMLS_CC);
+		zend_throw_exception(zend_exception_get_default(TSRMLS_C), (char *) message, report->errorNumber);
 	}
 }
 
 /* this function set a property on an object */
-void php_jsobject_set_property(JSContext *ctx, JSObject *obj, char *property_name, zval *val TSRMLS_DC)
+void php_jsobject_set_property(JSContext *ctx, JSObject *obj, char *property_name, zval *val)
 {
 	jsval jval;
 	
 	PHPJS_START(ctx);
 
 	/* first convert zval to jsval */
-	zval_to_jsval(val, ctx, &jval TSRMLS_CC);
+	zval_to_jsval(val, ctx, &jval);
 
 	/* no ref behavior, just set a property */
 	JSBool res = JS_SetProperty(ctx, obj, property_name, &jval);
@@ -94,12 +94,12 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	
 	if ((jsref = (php_jsobject_ref*)JS_GetPrivate(obj)) == nullptr)
 	{
-		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function table", 0 TSRMLS_CC);
+		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function table", 0);
 	}
 
 	/* search for function callback */
 	if (zend_hash_find(jsref->ht, func_name, strlen(func_name), (void**)&callback) == FAILURE) {
-		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0 TSRMLS_CC);
+		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0);
 	}
 
 	/* free function name */
@@ -119,7 +119,7 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	callback->fci.param_count		= argc;
 	callback->fci.retval_ptr_ptr	= &retval_ptr;
 
-	zend_call_function(&callback->fci, NULL TSRMLS_CC);
+	zend_call_function(&callback->fci, NULL);
 
 	/* call ended, clean */
 	for (i = 0; i < argc; i++)
@@ -132,7 +132,7 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 
 	if (retval_ptr != NULL)
 	{
-		zval_to_jsval(retval_ptr, cx, argv.rval().address() TSRMLS_CC);
+		zval_to_jsval(retval_ptr, cx, argv.rval().address());
 		zval_ptr_dtor(&retval_ptr);
 	}
 	else
@@ -173,7 +173,7 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 
 	/* search for class entry */
 	if (zend_hash_find(intern->ec_ht, class_name, strlen(class_name), (void**)&pce) == FAILURE) {
-		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0 TSRMLS_CC);
+		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0);
 	}
 	
 	/* free class name */
@@ -191,7 +191,7 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 		zend_fcall_info_cache	fcc;
 
 		if (!(ce->constructor->common.fn_flags & ZEND_ACC_PUBLIC)) {
-			zend_throw_exception_ex(zend_exception_get_default(TSRMLS_C), 0 TSRMLS_CC, "Access to non-public constructor");
+			zend_throw_exception_ex(zend_exception_get_default(TSRMLS_C), 0, "Access to non-public constructor");
 		}
 
 		object_init_ex(cobj, ce);
@@ -223,7 +223,7 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 		fcc.called_scope	= Z_OBJCE_P(cobj);
 		fcc.object_ptr		= cobj;
 
-		if (zend_call_function(&fci, &fcc TSRMLS_CC) == FAILURE)
+		if (zend_call_function(&fci, &fcc) == FAILURE)
 		{
 			/* call ended, clean */
 			for (i = 0; i < argc; i++)
@@ -257,14 +257,14 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 			zval_ptr_dtor(&retval_ptr);
 		}
 
-		zval_to_jsval(cobj, cx, argv.rval().address() TSRMLS_CC);
+		zval_to_jsval(cobj, cx, argv.rval().address());
 	
 		efree(params);
 	}
 	else
 	{
 		object_init_ex(cobj, ce);
-		zval_to_jsval(cobj, cx, argv.rval().address() TSRMLS_CC);
+		zval_to_jsval(cobj, cx, argv.rval().address());
 	}
 
 	zval_ptr_dtor(&cobj);
@@ -310,7 +310,7 @@ JSBool JS_PropertySetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
 			MAKE_STD_ZVAL(val);
 			jsval_to_zval(val, cx, vp);
 
-			zend_update_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), val TSRMLS_CC);
+			zend_update_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), val);
 			zval_ptr_dtor(&val);
 
 			/* free prop name */
@@ -360,14 +360,14 @@ JSBool JS_PropertyGetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
                 }
             }
 
-			val = zend_read_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), 1 TSRMLS_CC);
+			val = zend_read_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), 1);
 
 			/* free prop name */
 			JS_free(cx, prop_name);
 
 			if (val != EG(uninitialized_zval_ptr)) {
 				zval_add_ref(&val);
-				zval_to_jsval(val, cx, vp.address() TSRMLS_CC);
+				zval_to_jsval(val, cx, vp.address());
 				zval_ptr_dtor(&val);
 				return JS_TRUE;
 			}
@@ -399,14 +399,13 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 			 * hashtable back and free them */
 			for(zend_hash_internal_pointer_reset(jsref->ht); zend_hash_has_more_elements(jsref->ht) == SUCCESS; zend_hash_move_forward(jsref->ht))
 			{
-				char *key;
-				uint keylen;
+				zend_string *key;
 				ulong idx;
 				int type;
 				php_callback *callback;
 
 				/* retrieve current key */
-				type = zend_hash_get_current_key_ex(jsref->ht, &key, &keylen, &idx, 0, NULL);
+				type = zend_hash_get_current_key_ex(jsref->ht, &key, &idx, 0, NULL);
 				if (zend_hash_get_current_data(jsref->ht, (void**)&callback) == FAILURE) {
 					/* Should never actually fail
 					* since the key is known to exist. */
