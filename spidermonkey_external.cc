@@ -61,8 +61,9 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	JSFunction				*func;
 	JSString				*jfunc_name;
 	JSClass					*jclass;
-	char					*func_name;
-	zval					***params, *retval_ptr = NULL;
+	zend_string				*func_name;
+	zval					*params = NULL;
+	zval					retval;
 	php_callback			*callback;
 	php_jscontext_object	*intern;
 	php_jsobject_ref		*jsref;
@@ -78,7 +79,11 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	func = JS_ValueToFunction(cx, argv.calleev());
 	jfunc_name = JS_GetFunctionId(func);
 	/* because version 1.8.5 supports unicode, we must encode strings */
-	func_name = JS_EncodeString(cx, jfunc_name);
+
+	char * jsString  = JS_EncodeString(cx, jfunc_name);
+	func_name = zend_string_init(jsString, strlen(jsString), 0);
+	/* free function name */
+	JS_free(cx, jsString);
 
 	intern = (php_jscontext_object*)JS_GetContextPrivate(cx);
 	jclass = &intern->script_class;
@@ -98,47 +103,43 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	}
 
 	/* search for function callback */
-	if (zend_hash_find(jsref->ht, func_name, strlen(func_name), (void**)&callback) == FAILURE) {
+	zval *callback_zval = zend_hash_find(jsref->ht, func_name);
+	if (callback_zval == NULL) {
 		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0);
 	}
 
-	/* free function name */
-	JS_free(cx, func_name);
+	callback = (php_callback*)Z_PTR_P(callback_zval);
 
 	/* ready parameters */
-	params = (zval***)emalloc(argc * sizeof(zval**));
+	params = (zval*)emalloc(argc * sizeof(zval));
 	for (i = 0; i < argc; i++)
 	{
-		zval **val = (zval**)emalloc(sizeof(zval*));
-		MAKE_STD_ZVAL(*val);
-		jsval_to_zval(*val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
-		params[i] = val;
+		zval *val = &(params[i]);
+		jsval_to_zval(val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
 	}
 
 	callback->fci.params			= params;
 	callback->fci.param_count		= argc;
-	callback->fci.retval_ptr_ptr	= &retval_ptr;
+	callback->fci.retval	= &retval;
 
 	zend_call_function(&callback->fci, NULL);
 
 	/* call ended, clean */
 	for (i = 0; i < argc; i++)
 	{
-		zval **eval;
-		eval = params[i];
-		zval_ptr_dtor(eval);
-		efree(eval);
+		zval *val = &(params[i]);
+		zval_dtor(val);
 	}
 
-	if (retval_ptr != NULL)
-	{
-		zval_to_jsval(retval_ptr, cx, argv.rval().address());
-		zval_ptr_dtor(&retval_ptr);
-	}
-	else
-	{
-		argv.rval().get().setNull();
-	}
+	// if (retval != NULL)
+	// {
+		zval_to_jsval(&retval, cx, argv.rval().address());
+		zval_dtor(&retval);
+	// }
+	// else
+	// {
+	// 	argv.rval().get().setNull();
+	// }
 	
 	efree(params);
 
@@ -151,10 +152,10 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 	TSRMLS_FETCH();
 	JSFunction				*jclass;
 	JSString				*jclass_name;
-	char					*class_name;
-	zval					***params, *retval_ptr;
-	zend_class_entry		*ce, **pce;
-	zval					*cobj;
+	zend_string					*class_name;
+	zval					*params, retval;
+	zend_class_entry		*ce;
+	zval					cobj;
 	/*JSObject				*obj  = JS_THIS_OBJECT(cx, vp);
 	jsval					*argv = JS_ARGV(cx,vp);
 	jsval					*rval = &JS_RVAL(cx,vp);*/
@@ -167,23 +168,21 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 	jclass = JS_ValueToFunction(cx, argv.calleev());
 	jclass_name = JS_GetFunctionId(jclass);
 	/* because version 1.8.5 supports unicode, we must encode strings */
-	class_name = JS_EncodeString(cx, jclass_name);
+	char * jsString  = JS_EncodeString(cx, jclass_name);
+	class_name = zend_string_init(jsString, strlen(jsString), 0);
+	/* free class name */
+	JS_free(cx, jsString);
 
 	intern = (php_jscontext_object*)JS_GetContextPrivate(cx);
-
+	
 	/* search for class entry */
-	if (zend_hash_find(intern->ec_ht, class_name, strlen(class_name), (void**)&pce) == FAILURE) {
+	zval *pce_zval = zend_hash_find(intern->ec_ht, class_name);
+	if (pce_zval == NULL) {
 		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0);
 	}
 	
-	/* free class name */
-	JS_free(cx, class_name);
-
 	/* retrieve pointer to ce */
-	ce = *pce;
-
-	/* create object */
-	MAKE_STD_ZVAL(cobj);
+	ce = (zend_class_entry*)Z_PTR_P(pce_zval);
 
 	if (ce->constructor)
 	{
@@ -194,50 +193,52 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 			zend_throw_exception_ex(zend_exception_get_default(TSRMLS_C), 0, "Access to non-public constructor");
 		}
 
-		object_init_ex(cobj, ce);
+		object_init_ex(&cobj, ce);
 
 		/* ready parameters */
-		params = (zval***)emalloc(argc * sizeof(zval**));
+		params = (zval*)emalloc(argc * sizeof(zval));
 		for (i = 0; i < argc; i++)
 		{
-			zval *val;
-			MAKE_STD_ZVAL(val);
+			zval *val = &(params[i]);
 			jsval_to_zval(val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
-			SEPARATE_ARG_IF_REF(val);
-			params[i] = &val;
 		}
 
+		// 예전코드
+		// params = (zval***)emalloc(argc * sizeof(zval**));
+		// for (i = 0; i < argc; i++)
+		// {
+		// 	zval *val;
+		// 	jsval_to_zval(val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
+		// 	SEPARATE_ARG_IF_REF(val);
+		// 	params[i] = &val;
+		// }
+
 		fci.size			= sizeof(fci);
-		fci.function_table	= EG(function_table);
-		fci.function_name	= NULL;
-		fci.symbol_table	= NULL;
-		fci.object_ptr		= cobj;
-		fci.retval_ptr_ptr	= &retval_ptr;
+		// fci.function_name	= NULL;
+		fci.object		= Z_OBJ(cobj);
+		fci.retval = &retval;
 		fci.params			= params;
 		fci.param_count		= argc;
 		fci.no_separation	= 1;
 
 		fcc.initialized		= 1;
 		fcc.function_handler= ce->constructor;
-		fcc.calling_scope	= EG(scope);
-		fcc.called_scope	= Z_OBJCE_P(cobj);
-		fcc.object_ptr		= cobj;
+		fcc.calling_scope	= zend_get_executed_scope();
+		// fcc.called_scope	= Z_OBJCE_P(cobj);
+		fcc.called_scope	= ce; //이게 맞나?
+		fcc.object		= Z_OBJ(cobj);
 
 		if (zend_call_function(&fci, &fcc) == FAILURE)
 		{
 			/* call ended, clean */
 			for (i = 0; i < argc; i++)
 			{
-				zval *eval;
-				eval = *params[i];
-				zval_ptr_dtor(&eval);
-				efree(eval);
+				zval *eval = &(params[i]);
+				zval_dtor(eval); // 어차피 나중에 efree 해줄 메모리인데 dtor가 필요한가?
 			}
-			if (retval_ptr) {
-				zval_ptr_dtor(&retval_ptr);
-			}
+			
 			efree(params);
-			zval_ptr_dtor(&cobj);
+			zval_dtor(&cobj);
 			/* TODO: failed */
 			argv.rval().setNull();
 			return JS_FALSE;
@@ -246,31 +247,26 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 		/* call ended, clean */
 		for (i = 0; i < argc; i++)
 		{
-			zval *eval;
-			eval = *params[i];
-			zval_ptr_dtor(&eval);
-			efree(eval);
+			zval *eval = &(params[i]);
+			zval_dtor(eval);
 		}
 
-		if (retval_ptr)
-		{
-			zval_ptr_dtor(&retval_ptr);
-		}
-
-		zval_to_jsval(cobj, cx, argv.rval().address());
+		zval_dtor(&retval);
+		zval_to_jsval(&cobj, cx, argv.rval().address());
 	
 		efree(params);
 	}
 	else
 	{
-		object_init_ex(cobj, ce);
-		zval_to_jsval(cobj, cx, argv.rval().address());
+		object_init_ex(&cobj, ce);
+		zval_to_jsval(&cobj, cx, argv.rval().address());
 	}
 
-	zval_ptr_dtor(&cobj);
+	zval_dtor(&cobj);
 
 	return JS_TRUE;
 }
+
 JSBool JS_ResolvePHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle<jsid> id)
 {
 	/* always return true, as PHP doesn't use any resolver */
