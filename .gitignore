@@ -35,3 +35,15 @@ build/mkdep.awk
 build/scan_makefile_in.awk
 build/shtool
 .vscode
+*.diff
+*.log
+*.exp
+tests/*.sh
+tests/*.out
+tests/*.php
+*.so
+*.o
+*.lo
+*.la
+.libs
+tmp-php.ini
