@@ -131,6 +131,7 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 		zval_dtor(val);
 	}
 
+	// 참고: 예전코드
 	// if (retval != NULL)
 	// {
 		zval_to_jsval(&retval, cx, argv.rval().address());
@@ -203,7 +204,7 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 			jsval_to_zval(val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
 		}
 
-		// 예전코드
+		// 참고: 예전코드
 		// params = (zval***)emalloc(argc * sizeof(zval**));
 		// for (i = 0; i < argc; i++)
 		// {
@@ -294,7 +295,7 @@ JSBool JS_PropertySetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
 		if (jsref->obj != NULL && Z_TYPE_P(jsref->obj) == IS_OBJECT) {
 			JSString *str;
 			char *prop_name;
-			zval *val;
+			zval val;
 
 			/* 1.8.5 uses reals jsid for id, we need to convert it */
 			jsval rid;
@@ -303,10 +304,10 @@ JSBool JS_PropertySetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
 			/* because version 1.8.5 supports unicode, we must encode strings */
 			prop_name = JS_EncodeString(cx, str);
 
-			MAKE_STD_ZVAL(val);
-			jsval_to_zval(val, cx, vp);
+			// MAKE_STD_ZVAL(val);
+			jsval_to_zval(&val, cx, vp);
 
-			zend_update_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), val);
+			zend_update_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), &val);
 			zval_ptr_dtor(&val);
 
 			/* free prop name */
@@ -356,17 +357,17 @@ JSBool JS_PropertyGetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
                 }
             }
 
-			val = zend_read_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), 1);
+			// val = zend_read_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), 1);
 
 			/* free prop name */
 			JS_free(cx, prop_name);
 
-			if (val != EG(uninitialized_zval_ptr)) {
-				zval_add_ref(&val);
-				zval_to_jsval(val, cx, vp.address());
-				zval_ptr_dtor(&val);
-				return JS_TRUE;
-			}
+			// if (val != EG(uninitialized_zval_ptr)) {
+			// 	zval_add_ref(&val);
+			// 	zval_to_jsval(val, cx, vp.address());
+			// 	// zval_ptr_dtor(&val);
+			// 	return JS_TRUE;
+			// }
 		}
 	}
 	
@@ -396,13 +397,14 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 			for(zend_hash_internal_pointer_reset(jsref->ht); zend_hash_has_more_elements(jsref->ht) == SUCCESS; zend_hash_move_forward(jsref->ht))
 			{
 				zend_string *key;
-				ulong idx;
+				zend_ulong idx;
 				int type;
 				php_callback *callback;
 
 				/* retrieve current key */
-				type = zend_hash_get_current_key_ex(jsref->ht, &key, &idx, 0, NULL);
-				if (zend_hash_get_current_data(jsref->ht) == FAILURE) {
+				type = zend_hash_get_current_key_ex(jsref->ht, &key, &idx, NULL);
+				zval* val = zend_hash_get_current_data(jsref->ht);
+				if (val == NULL) {
 					/* Should never actually fail
 					* since the key is known to exist. */
 					continue;
@@ -419,7 +421,7 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 		/* remove reference to object and call ptr dtor */
 		if (jsref->obj != NULL)
 		{
-			zval_ptr_dtor(&jsref->obj);
+			zval_ptr_dtor(jsref->obj);
 		}
 
 		/* then destroy JSRef */
