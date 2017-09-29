@@ -81,37 +81,31 @@ static zend_object_handlers jscontext_object_handlers;
 static void php_jscontext_object_free_storage(zend_object *object)
 {
 	//todo: 이거 컨버팅하면 안될거같은데...
-	php_jscontext_object *intern = (php_jscontext_object *)object;
+	// php_jscontext_object *intern = (php_jscontext_object *)object;
 
-	// if a context is found ( which should be the case )
-	// destroy it
-	if (intern->ct != (JSContext*)NULL) {
-		JS_LeaveCompartment(intern->ct, intern->cpt);
-		JS_DestroyContext(intern->ct);
-	}
+	// // if a context is found ( which should be the case )
+	// // destroy it
+	// if (intern->ct != (JSContext*)NULL) {
+	// 	JS_LeaveCompartment(intern->ct, intern->cpt);
+	// 	JS_DestroyContext(intern->ct);
+	// }
 
-	if (intern->ec_ht != NULL)
-	{
-		zend_hash_destroy(intern->ec_ht);
-		FREE_HASHTABLE(intern->ec_ht);
-	}
+	// if (intern->ec_ht != NULL)
+	// {
+	// 	zend_hash_destroy(intern->ec_ht);
+	// 	FREE_HASHTABLE(intern->ec_ht);
+	// }
 
-	zend_object_std_dtor(&intern->zo);
-	efree(object);
+	// zend_object_std_dtor(&intern->zo);
 }
 
-static zend_object* php_jscontext_object_new_ex(zend_class_entry *class_type, php_jscontext_object **ptr)
+static zend_object* php_jscontext_object_new(zend_class_entry *ce)
 {
 	zval *tmp;
 	php_jscontext_object *intern;
 
 	/* Allocate memory for it */
-	intern = (php_jscontext_object *) ecalloc(1, sizeof(php_jscontext_object) + zend_object_properties_size(class_type));
-
-	if (ptr)
-	{
-		*ptr = intern;
-	}
+	intern = (php_jscontext_object *) ecalloc(1, sizeof(php_jscontext_object) + zend_object_properties_size(ce));
 
 	/* if no runtime is found create one */
 	if (SPIDERMONKEY_G(rt) == NULL)
@@ -177,10 +171,8 @@ static zend_object* php_jscontext_object_new_ex(zend_class_entry *class_type, ph
 	JS_SetPrivate(intern->obj, intern->jsref);
 
 	/* create zend object */
-	zend_object_std_init(&intern->zo, class_type);
-
-	jscontext_object_handlers.offset = XtOffsetOf(php_jscontext_object, zo);
-	jscontext_object_handlers.free_obj = php_jscontext_object_free_storage;
+	zend_object_std_init(&intern->zo, ce);
+	object_properties_init(&intern->zo, ce);
 
 	intern->zo.handlers = &jscontext_object_handlers;
 
@@ -188,9 +180,15 @@ static zend_object* php_jscontext_object_new_ex(zend_class_entry *class_type, ph
 	return &intern->zo;
 }
 
-static zend_object* php_jscontext_object_new(zend_class_entry *class_type)
+static HashTable * get_gc(zval *object, zval **gc_data, int *gc_count)/*{{{*/
 {
-	return php_jscontext_object_new_ex(class_type, NULL);
+	*gc_data = NULL;
+	*gc_count = 0;
+	return zend_std_get_properties(object);
+}
+	
+static void php_spidermonkey_init_globals(zend_spidermonkey_globals *hello_globals)
+{
 }
 
 /**
@@ -221,23 +219,27 @@ PHP_MINIT_FUNCTION(spidermonkey)
 	REGISTER_LONG_CONSTANT("JSVERSION_DEFAULT", JSVERSION_DEFAULT,  CONST_CS | CONST_PERSISTENT);
 
 	// CLASS INIT
-#ifdef ZTS
-	//ts_allocate_id(&spidermonkey_globals_id, sizeof(spidermonkey_globals), NULL, NULL);
-	ZEND_INIT_MODULE_GLOBALS(spidermonkey, NULL, NULL);
-#endif
+	ZEND_DECLARE_MODULE_GLOBALS(spidermonkey);
+	ZEND_INIT_MODULE_GLOBALS(spidermonkey, php_spidermonkey_init_globals, NULL);
 
 	SPIDERMONKEY_G(rt) = NULL;
 
 	// here we set handlers to zero, meaning that we have no handlers set
 	memcpy(&jscontext_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	jscontext_object_handlers.offset = XtOffsetOf(php_jscontext_object, zo);
+	jscontext_object_handlers.get_gc = get_gc;
+	jscontext_object_handlers.clone_obj = NULL;
+	
+	// todo: 처리
+	// jscontext_object_handlers.free_obj = php_jscontext_object_free_storage;
 
 	// init JSContext class
 	INIT_CLASS_ENTRY(ce, PHP_SPIDERMONKEY_JSC_NAME, php_spidermonkey_jsc_functions);
 	// this function will be called when the object is created by php
-	ce.create_object = php_jscontext_object_new;
+	// ce.create_object = php_jscontext_object_new;
 	// register class in PHP
 	php_spidermonkey_jsc_entry = zend_register_internal_class(&ce);
-
+	
 	return SUCCESS;
 }
 
