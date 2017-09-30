@@ -77,26 +77,28 @@ zend_function_entry php_spidermonkey_jsc_functions[] = {
 
 static zend_object_handlers jscontext_object_handlers;
 
-//static void php_jscontext_object_free_storage(void *object)
+static inline php_jscontext_object* php_jscontext_fetch_object(zend_object *obj) {
+    return (php_jscontext_object *)((char *)obj - XtOffsetOf(php_jscontext_object, zo));
+}
+
 static void php_jscontext_object_free_storage(zend_object *object)
 {
-	//todo: 이거 컨버팅하면 안될거같은데...
-	// php_jscontext_object *intern = (php_jscontext_object *)object;
+	php_jscontext_object *intern = php_jscontext_fetch_object(object);
 
-	// // if a context is found ( which should be the case )
-	// // destroy it
-	// if (intern->ct != (JSContext*)NULL) {
-	// 	JS_LeaveCompartment(intern->ct, intern->cpt);
-	// 	JS_DestroyContext(intern->ct);
-	// }
+	// if a context is found ( which should be the case )
+	// destroy it
+	if (intern->ct != (JSContext*)NULL) {
+		JS_LeaveCompartment(intern->ct, intern->cpt);
+		JS_DestroyContext(intern->ct);
+	}
 
-	// if (intern->ec_ht != NULL)
-	// {
-	// 	zend_hash_destroy(intern->ec_ht);
-	// 	FREE_HASHTABLE(intern->ec_ht);
-	// }
+	if (intern->ec_ht != NULL)
+	{
+		zend_hash_destroy(intern->ec_ht);
+		FREE_HASHTABLE(intern->ec_ht);
+	}
 
-	// zend_object_std_dtor(&intern->zo);
+	zend_object_std_dtor(&intern->zo);
 }
 
 static zend_object* php_jscontext_object_new(zend_class_entry *ce)
@@ -229,14 +231,12 @@ PHP_MINIT_FUNCTION(spidermonkey)
 	jscontext_object_handlers.offset = XtOffsetOf(php_jscontext_object, zo);
 	jscontext_object_handlers.get_gc = get_gc;
 	jscontext_object_handlers.clone_obj = NULL;
-	
-	// todo: 처리
-	// jscontext_object_handlers.free_obj = php_jscontext_object_free_storage;
+	jscontext_object_handlers.free_obj = php_jscontext_object_free_storage;
 
 	// init JSContext class
 	INIT_CLASS_ENTRY(ce, PHP_SPIDERMONKEY_JSC_NAME, php_spidermonkey_jsc_functions);
 	// this function will be called when the object is created by php
-	// ce.create_object = php_jscontext_object_new;
+	ce.create_object = php_jscontext_object_new;
 	// register class in PHP
 	php_spidermonkey_jsc_entry = zend_register_internal_class(&ce);
 	

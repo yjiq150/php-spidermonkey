@@ -144,21 +144,20 @@ PHP_METHOD(JSContext, assign)
 PHP_METHOD(JSContext, evaluateScript)
 {
 	zend_string *script;
-	zend_string *script_name = NULL;
 	
 	php_jscontext_object *intern;
 	jsval rval;
 
 	/* retrieve script */
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|S", &script, &script_name) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &script) == FAILURE) {
 		RETURN_FALSE;
 	}
 
 	intern = (php_jscontext_object *) Z_OBJ_P(getThis());
 	
 	PHPJS_START(intern->ct);
-	
-	if (JS_EvaluateScript(intern->ct, intern->obj, ZSTR_VAL(script), ZSTR_LEN(script), ZSTR_VAL(script_name), 0, &rval) == JS_TRUE)
+
+	if (JS_EvaluateScript(intern->ct, intern->obj, ZSTR_VAL(script), ZSTR_LEN(script), "evaluateScript", 0, &rval) == JS_TRUE)
 	{
 		if (!rval.isNullOrUndefined())
 		{
