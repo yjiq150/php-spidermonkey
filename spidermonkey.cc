@@ -89,13 +89,25 @@ static void php_jscontext_object_free_storage(zend_object *object)
 	// destroy it
 	if (intern->ct != (JSContext*)NULL) {
 		JS_LeaveCompartment(intern->ct, intern->cpt);
-		JS_DestroyContext(intern->ct);
+		// todo: 크래시
+		// JS_DestroyContext(intern->ct);
 	}
 
 	if (intern->ec_ht != NULL)
 	{
 		zend_hash_destroy(intern->ec_ht);
 		FREE_HASHTABLE(intern->ec_ht);
+	}
+
+	if (intern->jsref->ht != NULL)
+	{
+		zend_hash_destroy(intern->jsref->ht);
+		FREE_HASHTABLE(intern->jsref->ht);
+	}
+
+	if (intern->jsref != NULL)
+	{
+		efree(intern->jsref);
 	}
 
 	zend_object_std_dtor(&intern->zo);

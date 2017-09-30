@@ -31,11 +31,14 @@ zend_class_entry *php_spidermonkey_jsc_entry;
    Register a PHP function in a Javascript context allowing a script to call it*/
 PHP_METHOD(JSContext, registerFunction)
 {
-	zend_string				*name;
-	php_callback			callback;
+	zend_string				*name = NULL;
+	php_callback			*callback;
 	php_jscontext_object	*intern;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|S", &callback.fci, &callback.fci_cache, &name) == FAILURE) {
+	// todo: leak 이거 언제 해제할래?
+	callback = (php_callback*)ecalloc(1, sizeof(php_callback));
+	
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|S", &callback->fci, &callback->fci_cache, &name) == FAILURE) {
 		RETURN_NULL();
 	}
 
@@ -44,17 +47,17 @@ PHP_METHOD(JSContext, registerFunction)
 	
 	PHPJS_START(intern->ct);
 
-	// todo: check if function name is char*?
-	//Z_ADDREF_P(callback.fci.function_name);
+	// todo: 필요없는듯?
+	//Z_ADDREF(callback.fci.function_name);
 
 	/* TODO: error management is needed here, we should throw an exception if the "name" entry
 	 *        already exists */
-	// if (name == NULL) {
-	// 	name		= Z_STRVAL_P(callback.fci.function_name);
-	// }
+	if (name == NULL) {
+		name = callback->fci.function_name.value.str;
+	}
 
-	// zend_hash_add(intern->jsref->ht, name, &callback);
-	//JS_DefineFunction(intern->ct, intern->obj, name, generic_call, 1, 0);
+	zend_hash_add_new_ptr(intern->jsref->ht, name, callback);
+	JS_DefineFunction(intern->ct, intern->obj, ZSTR_VAL(name), generic_call, 1, 0);
 	
 	PHPJS_END(intern->ct);
 }
@@ -91,10 +94,10 @@ PHP_METHOD(JSContext, registerClass)
 	JSClass *reClass = (JSClass*)emalloc(sizeof(JSClass));
 	memcpy(reClass, &intern->script_class, sizeof(intern->script_class));
 	if (exported_name != NULL) {
-		zend_hash_add(intern->ec_ht, exported_name, &ce);
+		zend_hash_add_new_ptr(intern->ec_ht, exported_name, ce);
 		reClass->name = ZSTR_VAL(exported_name);
 	} else {
-		zend_hash_add(intern->ec_ht, class_name, &ce);
+		zend_hash_add_new_ptr(intern->ec_ht, class_name, ce);
 		reClass->name = ZSTR_VAL(class_name);
 	}
 
