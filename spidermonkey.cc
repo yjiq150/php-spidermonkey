@@ -634,56 +634,45 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
-		case IS_ARRAY:
+		case IS_ARRAY: {
 			/* retrieve the array hash table */
-			// ht = HASH_OF(val);
+			ht = HASH_OF(val);
 
-			// /* create JSObject */
-			// jobj = JS_NewArrayObject(ctx, 0, nullptr);
+			/* create JSObject */
+			jobj = JS_NewArrayObject(ctx, 0, nullptr);
 
-			// // prevent GC
-			// JS_AddObjectRoot(ctx, &jobj);
+			// prevent GC
+			JS_AddObjectRoot(ctx, &jobj);
 
-			// /* foreach item */
-			// for(zend_hash_internal_pointer_reset(ht); zend_hash_has_more_elements(ht) == SUCCESS; zend_hash_move_forward(ht))
-			// {
-			// 	zend_string *key;
-			// 	ulong idx;
-			// 	int type;
-			// 	zval **ppzval;
-			// 	char intIdx[25];
+			zend_string *string_key = NULL;
+			zend_ulong num_key = 0;
+			zval *value;
 
-			// 	/* retrieve current key */
-			// 	type = zend_hash_get_current_key_ex(ht, &key, &idx, 0, NULL);
-			// 	if (zend_hash_get_current_data(ht) == FAILURE) {
-			// 		/* Should never actually fail
-			// 		 * since the key is known to exist. */
-			// 		continue;
-			// 	}
+			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, value) {
+				
+				if (string_key) 
+				{
+					php_jsobject_set_property(ctx, jobj, ZSTR_VAL(string_key), value);
+				}
+				else 
+				{
+					jsval jarrval;
+	
+					/* first convert zval to jsval */
+					zval_to_jsval(value, ctx, &jarrval);
 
-			// 	if (type == HASH_KEY_IS_LONG)
-			// 	{
-			// 		//sprintf(intIdx, "%ld", idx);
-			// 		//php_jsobject_set_property(ctx, jobj, intIdx, *ppzval);
-			// 		jsval jarrval;
-
-			// 		/* first convert zval to jsval */
-			// 		zval_to_jsval(*ppzval, ctx, &jarrval);
-
-			// 		/* no ref behavior, just set a property */
-			// 		//JSBool res = JS_SetProperty(ctx, obj, property_name, &jval);
-			// 		//JSBool res = JS_SetElement(ctx, jobj, idx, &jarrval);
-			// 		JSBool res = JS_DefineElement(ctx, jobj, idx, jarrval, nullptr, nullptr, 0);
-
-			// 	}
-			// 	else
-			// 	{
-			// 		php_jsobject_set_property(ctx, jobj, ZSTR_VAL(key), *ppzval);
-			// 	}
-			// }
+					/* no ref behavior, just set a property */
+					//JSBool res = JS_SetProperty(ctx, obj, property_name, &jval);
+					//JSBool res = JS_SetElement(ctx, jobj, idx, &jarrval);
+					JSBool res = JS_DefineElement(ctx, jobj, num_key, jarrval, nullptr, nullptr, 0);
+				}
+				
+			} ZEND_HASH_FOREACH_END();
+			
 
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
+		}
 		case IS_NULL:
 			*jval = JSVAL_NULL;
 			break;
