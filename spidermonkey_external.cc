@@ -111,17 +111,23 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	callback = (php_callback*)Z_PTR_P(callback_zval);
 
 	/* ready parameters */
-	params = (zval*)emalloc(argc * sizeof(zval));
+	params = (zval*)ecalloc(1, argc * sizeof(zval));
 	for (i = 0; i < argc; i++)
 	{
 		zval *val = &(params[i]);
 		jsval_to_zval(val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
 	}
 
-	callback->fci.params			= params;
+	if (argc == 0) {
+		callback->fci.params = NULL;
+	} else {
+		callback->fci.params = params;
+	}
+
 	callback->fci.param_count		= argc;
 	callback->fci.retval	= &retval;
 
+	// todo: cache 안쓸래?
 	zend_call_function(&callback->fci, NULL);
 
 	/* call ended, clean */
