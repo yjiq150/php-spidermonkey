@@ -289,17 +289,14 @@ PHP_METHOD(JSContext, getVersion)
 PHP_METHOD(JSContext, getVersionString)
 {
 	const char *version_str;
-	int l;
-	long version;
+	zend_long version;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &version) == FAILURE) {
 		RETURN_NULL();
 	}
 
 	version_str = JS_VersionToString((JSVersion)version);
-	l = strlen(version_str);
-
-	RETVAL_STRINGL(estrndup(version_str, l), l);
+	RETVAL_STRINGL(version_str, strlen(version_str));
 }
 /* }}} */
 

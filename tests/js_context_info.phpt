@@ -1,5 +1,5 @@
 --TEST--
-Check JSContext->evaluete()
+Check JSContext->getVersionString()
 --FILE--
 <?php
 $js = new JSContext();
