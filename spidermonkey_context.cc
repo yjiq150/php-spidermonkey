@@ -79,13 +79,12 @@ PHP_METHOD(JSContext, registerClass)
 	PHPJS_START(intern->ct);
 
 	if (ZSTR_LEN(class_name)) {
-		zend_class_entry *pce = zend_lookup_class(class_name);
-		if (!EG(exception)) {
+		ce = zend_lookup_class(class_name);
+		if (ce == NULL) {
 			PHPJS_END(intern->ct);
-			zend_throw_exception_ex(zend_exception_get_default(TSRMLS_C), 0, "Class %s doesn't exists !", class_name);
+			zend_throw_exception_ex(zend_exception_get_default(TSRMLS_C), 0, "Class %s doesn't exists !", ZSTR_VAL(class_name));
 			return;
 		}
-		ce = pce;
 	}
 
 	JSClass *reClass = (JSClass*)emalloc(sizeof(JSClass));

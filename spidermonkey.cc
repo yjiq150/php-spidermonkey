@@ -491,9 +491,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 {
 	JSString				*jstr;
 	JSObject				*jobj;
-	HashTable				*ht;
 	zend_class_entry		*ce = NULL;
-	zend_function			*fptr;
 	php_jscontext_object	*intern;
 	php_jsobject_ref		*jsref;
 	php_stream				*stream;
@@ -561,7 +559,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
-		case IS_OBJECT:
+		case IS_OBJECT: {
 
 			intern = (php_jscontext_object*)JS_GetContextPrivate(ctx);
 			/* create JSObject */
@@ -581,25 +579,27 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 			/* retrieve class entry */
 			ce = Z_OBJCE_P(val);
+
 			/* get function table */
-			ht = &ce->function_table;
+			HashTable *func_ht = &ce->function_table;
 			
 			/* foreach functions */
 			zend_string				*key;
 			ulong num_key;
-			zval*					z_fname;
+			zval*					zval_func;
 
-			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, key, z_fname) {
+			ZEND_HASH_FOREACH_KEY_VAL(func_ht, num_key, key, zval_func) {
 				
-				//todo: 여기 콜백이 해제 안되고 살아있는가?
 				php_callback *callback = (php_callback*)ecalloc(1, sizeof(php_callback));
 				
-				/* store the function name as a zval */
-				ZVAL_STR(z_fname, fptr->common.function_name);
+				zend_function* fptr = Z_FUNC_P(zval_func);
 
+				zval function_name;
+				ZVAL_STR(&function_name, fptr->common.function_name);
+				
 				/* then build the zend_fcall_info and cache */
 				callback->fci.size = sizeof(callback->fci);
-				callback->fci.function_name = *z_fname;
+				callback->fci.function_name = function_name;
 				callback->fci.retval = NULL;
 				callback->fci.params = NULL;
 				callback->fci.object = Z_OBJ_P(val);
@@ -619,9 +619,10 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
+		}
 		case IS_ARRAY: {
 			/* retrieve the array hash table */
-			ht = HASH_OF(val);
+			HashTable *array_ht = HASH_OF(val);
 
 			/* create JSObject */
 			jobj = JS_NewArrayObject(ctx, 0, nullptr);
@@ -633,7 +634,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			zend_ulong num_key = 0;
 			zval *z_value;
 
-			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, z_value) {
+			ZEND_HASH_FOREACH_KEY_VAL(array_ht, num_key, string_key, z_value) {
 				
 				if (string_key) 
 				{

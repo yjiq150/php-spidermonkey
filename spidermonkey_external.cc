@@ -103,13 +103,11 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	}
 
 	/* search for function callback */
-	zval *callback_zval = zend_hash_find(jsref->ht, func_name);
-	if (callback_zval == NULL) {
+	callback = (php_callback*)zend_hash_find_ptr(jsref->ht, func_name);
+	if (callback == NULL) {
 		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0);
 	}
-
-	callback = (php_callback*)Z_PTR_P(callback_zval);
-
+	
 	/* ready parameters */
 	params = (zval*)ecalloc(1, argc * sizeof(zval));
 	for (i = 0; i < argc; i++)
@@ -196,14 +194,11 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 	intern = (php_jscontext_object*)JS_GetContextPrivate(cx);
 	
 	/* search for class entry */
-	zval *pce_zval = zend_hash_find(intern->ec_ht, class_name);
-	if (pce_zval == NULL) {
+	ce = (zend_class_entry*)zend_hash_find_ptr(intern->ec_ht, class_name);
+	if (ce == NULL) {
 		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function callback", 0);
 	}
 	
-	/* retrieve pointer to ce */
-	ce = (zend_class_entry*)Z_PTR_P(pce_zval);
-
 	if (ce->constructor)
 	{
 		zend_fcall_info			fci;
@@ -223,18 +218,7 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 			jsval_to_zval(val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
 		}
 
-		// 참고: 예전코드
-		// params = (zval***)emalloc(argc * sizeof(zval**));
-		// for (i = 0; i < argc; i++)
-		// {
-		// 	zval *val;
-		// 	jsval_to_zval(val, cx, JS::MutableHandleValue::fromMarkedLocation(&argv[i]));
-		// 	SEPARATE_ARG_IF_REF(val);
-		// 	params[i] = &val;
-		// }
-
 		fci.size			= sizeof(fci);
-		// fci.function_name	= NULL;
 		fci.object		= Z_OBJ(cobj);
 		fci.retval = &retval;
 		fci.params			= params;
@@ -244,8 +228,8 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 		fcc.initialized		= 1;
 		fcc.function_handler= ce->constructor;
 		fcc.calling_scope	= zend_get_executed_scope();
-		// fcc.called_scope	= Z_OBJCE_P(cobj);
-		fcc.called_scope	= ce; //이게 맞나?
+		fcc.called_scope	= Z_OBJCE(cobj);
+		//fcc.called_scope	= ce; // todo: 이거랑 차이?
 		fcc.object		= Z_OBJ(cobj);
 
 		if (zend_call_function(&fci, &fcc) == FAILURE)
@@ -283,6 +267,8 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 	}
 
 	zval_dtor(&cobj);
+
+	zend_string_free(class_name);
 
 	return JS_TRUE;
 }
