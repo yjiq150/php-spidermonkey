@@ -89,7 +89,6 @@ static void php_jscontext_object_free_storage(zend_object *object)
 	// destroy it
 	if (intern->ct != (JSContext*)NULL) {
 		JS_LeaveCompartment(intern->ct, intern->cpt);
-		// todo: 크래시
 		JS_DestroyContext(intern->ct);
 	}
 
@@ -310,7 +309,6 @@ void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Va
 				/* then we retrieve the pointer to the string */
 				char *txt = JS_EncodeString(ctx, str);
 				RETVAL_STRINGL(txt, strlen(txt));
-				// RETVAL_STRINGL(txt, strlen(txt), 1);
 				JS_free(ctx, txt);
 			}
 			else

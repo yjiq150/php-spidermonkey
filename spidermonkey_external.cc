@@ -128,6 +128,7 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	callback->fci.retval	= &retval;
 
 	// todo: cache 안쓸래?
+	// zend_call_function(&callback->fci, &callback->fci_cache);
 	zend_call_function(&callback->fci, NULL);
 
 	/* call ended, clean */
@@ -137,11 +138,21 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 		zval_dtor(val);
 	}
 
+	if(Z_TYPE(retval) == IS_NULL) 
+	{
+		argv.rval().get().setNull();
+	} 
+	else 
+	{
+		zval_to_jsval(&retval, cx, argv.rval().address());
+	}
+
+
 	// 참고: 예전코드
 	// if (retval != NULL)
 	// {
-		zval_to_jsval(&retval, cx, argv.rval().address());
-		zval_dtor(&retval);
+		// zval_to_jsval(&retval, cx, argv.rval().address());
+		// zval_dtor(&retval);
 	// }
 	// else
 	// {
@@ -340,9 +351,11 @@ JSBool JS_PropertyGetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
 	if (obj == intern->obj) {
 		jclass =&intern->global_class;
 	}
+	
 	jsref = (php_jsobject_ref*)JS_GetInstancePrivate(cx, obj, &intern->script_class, NULL);
 
-	if (jsref != NULL) {
+	if (jsref != NULL) 
+	{
 		if (jsref->obj != NULL && Z_TYPE_P(jsref->obj) == IS_OBJECT) {
 			JSString *str;
 			char *prop_name;
@@ -365,11 +378,13 @@ JSBool JS_PropertyGetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
                 }
             }
 
+			// todo:
 			// val = zend_read_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), 1);
 
 			/* free prop name */
 			JS_free(cx, prop_name);
 
+			// todo:
 			// if (val != EG(uninitialized_zval_ptr)) {
 			// 	zval_add_ref(&val);
 			// 	zval_to_jsval(val, cx, vp.address());
@@ -389,10 +404,8 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 	php_jsobject_ref		*jsref;
 	php_jscontext_object	*intern;
 
-	//intern = (php_jscontext_object*)JS_GetContextPrivate(JS_GetCon);
-	//jsref = (php_jsobject_ref*)JS_GetInstancePrivate(cx, obj, &intern->script_class, NULL);
+	// it is safe to use JS_GetPrivate in a finalizer.
 	jsref = (php_jsobject_ref*)JS_GetPrivate(obj);
-	//JS_GetPrivate()
 
 	/* destroy ref object */
 	if (jsref != NULL)

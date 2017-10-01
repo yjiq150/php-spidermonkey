@@ -47,13 +47,9 @@ PHP_METHOD(JSContext, registerFunction)
 	
 	PHPJS_START(intern->ct);
 
-	// todo: 필요없는듯?
-	//Z_ADDREF(callback.fci.function_name);
-
 	/* TODO: error management is needed here, we should throw an exception if the "name" entry
 	 *        already exists */
 	if (name == NULL) {
-		//name = zend_string_copy(Z_STR(callback->fci.function_name));
 		name = Z_STR(callback->fci.function_name);
 	}
 
@@ -125,7 +121,7 @@ PHP_METHOD(JSContext, registerClass)
 PHP_METHOD(JSContext, assign)
 {
 	zend_string				*name;
-	zval					*val = NULL;
+	zval					*val;
 	php_jscontext_object	*intern;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sz", &name, &val) == FAILURE) {
