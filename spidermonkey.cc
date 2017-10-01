@@ -658,6 +658,8 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			
 
 			*jval = OBJECT_TO_JSVAL(jobj);
+			
+			JS_RemoveObjectRoot(ctx, &jobj);
 			break;
 		}
 		case IS_NULL:
