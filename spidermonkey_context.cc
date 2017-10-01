@@ -35,7 +35,7 @@ PHP_METHOD(JSContext, registerFunction)
 	php_callback			*callback;
 	php_jscontext_object	*intern;
 
-	// todo: leak 이거 언제 해제할래?
+	// efree(callback) on JS_FinalizePHP
 	callback = (php_callback*)ecalloc(1, sizeof(php_callback));
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|S", &callback->fci, &callback->fci_cache, &name) == FAILURE) {
@@ -53,7 +53,8 @@ PHP_METHOD(JSContext, registerFunction)
 	/* TODO: error management is needed here, we should throw an exception if the "name" entry
 	 *        already exists */
 	if (name == NULL) {
-		name = callback->fci.function_name.value.str;
+		//name = zend_string_copy(Z_STR(callback->fci.function_name));
+		name = Z_STR(callback->fci.function_name);
 	}
 
 	zend_hash_add_new_ptr(intern->jsref->ht, name, callback);

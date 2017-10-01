@@ -90,24 +90,13 @@ static void php_jscontext_object_free_storage(zend_object *object)
 	if (intern->ct != (JSContext*)NULL) {
 		JS_LeaveCompartment(intern->ct, intern->cpt);
 		// todo: 크래시
-		// JS_DestroyContext(intern->ct);
+		JS_DestroyContext(intern->ct);
 	}
 
 	if (intern->ec_ht != NULL)
 	{
 		zend_hash_destroy(intern->ec_ht);
 		FREE_HASHTABLE(intern->ec_ht);
-	}
-
-	if (intern->jsref->ht != NULL)
-	{
-		zend_hash_destroy(intern->jsref->ht);
-		FREE_HASHTABLE(intern->jsref->ht);
-	}
-
-	if (intern->jsref != NULL)
-	{
-		efree(intern->jsref);
 	}
 
 	zend_object_std_dtor(&intern->zo);
@@ -132,7 +121,7 @@ static zend_object* php_jscontext_object_new(zend_class_entry *ce)
 	zend_hash_init(intern->ec_ht, 20, NULL, NULL, 0);
 
 	/* prepare hashtable for callback storage */
-	intern->jsref = (php_jsobject_ref*)emalloc(sizeof(php_jsobject_ref));
+	intern->jsref = (php_jsobject_ref*)ecalloc(1, sizeof(php_jsobject_ref));
 	/* create callback hashtable */
 	ALLOC_HASHTABLE(intern->jsref->ht);
 	zend_hash_init(intern->jsref->ht, 50, NULL, NULL, 0);
@@ -605,26 +594,26 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, key, z_fname) {
 				
 				//todo: 여기 콜백이 해제 안되고 살아있는가?
-				php_callback			cb;
+				php_callback *callback = (php_callback*)ecalloc(1, sizeof(php_callback));
 				
 				/* store the function name as a zval */
 				ZVAL_STR(z_fname, fptr->common.function_name);
 
 				/* then build the zend_fcall_info and cache */
-				cb.fci.size = sizeof(cb.fci);
-				cb.fci.function_name = *z_fname;
-				cb.fci.retval = NULL;
-				cb.fci.params = NULL;
-				cb.fci.object = Z_OBJ_P(val);
-				cb.fci.no_separation = 1;
+				callback->fci.size = sizeof(callback->fci);
+				callback->fci.function_name = *z_fname;
+				callback->fci.retval = NULL;
+				callback->fci.params = NULL;
+				callback->fci.object = Z_OBJ_P(val);
+				callback->fci.no_separation = 1;
 
-				cb.fci_cache.initialized = 1;
-				cb.fci_cache.function_handler = fptr;
-				cb.fci_cache.calling_scope = ce;
-				cb.fci_cache.object = Z_OBJ_P(val);
+				callback->fci_cache.initialized = 1;
+				callback->fci_cache.function_handler = fptr;
+				callback->fci_cache.calling_scope = ce;
+				callback->fci_cache.object = Z_OBJ_P(val);
 
 				/* store them */
-				zend_hash_add_new_ptr(jsref->ht, fptr->common.function_name, &cb);
+				zend_hash_add_new_ptr(jsref->ht, fptr->common.function_name, callback);
 
 				/* define the function */
 				JS_DefineFunction(ctx, jobj, ZSTR_VAL(fptr->common.function_name), generic_call, 1, 0);

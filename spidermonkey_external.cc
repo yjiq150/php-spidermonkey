@@ -150,6 +150,8 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	
 	efree(params);
 
+	zend_string_release(func_name);
+
 	return JS_TRUE;
 }
 
@@ -398,27 +400,20 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 		/* free the functions hash table */
 		if (jsref->ht != NULL)
 		{
-			/* because we made a zval for each function callback, parse the whole
-			 * hashtable back and free them */
-			for(zend_hash_internal_pointer_reset(jsref->ht); zend_hash_has_more_elements(jsref->ht) == SUCCESS; zend_hash_move_forward(jsref->ht))
-			{
-				zend_string *key;
-				zend_ulong idx;
-				int type;
-				php_callback *callback;
+			HashTable* ht = jsref->ht;
+			zend_string *string_key = NULL;
+			zend_ulong num_key = 0;
+			zval *zval_callback;
 
-				/* retrieve current key */
-				type = zend_hash_get_current_key_ex(jsref->ht, &key, &idx, NULL);
-				zval* val = zend_hash_get_current_data(jsref->ht);
-				if (val == NULL) {
-					/* Should never actually fail
-					* since the key is known to exist. */
-					continue;
-				}
+			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, zval_callback) {
+
+				php_callback *callback = (php_callback*)Z_PTR_P(zval_callback);
 
 				/* free the string used for the function name */
-				zval_ptr_dtor(&callback->fci.function_name);
-			}
+				//zval_dtor(&callback->fci.function_name);
+				efree(callback);
+
+			} ZEND_HASH_FOREACH_END();
 			/* destroy hashtable */
 			zend_hash_destroy(jsref->ht);
 			FREE_HASHTABLE(jsref->ht);
@@ -427,7 +422,7 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 		/* remove reference to object and call ptr dtor */
 		if (jsref->obj != NULL)
 		{
-			zval_ptr_dtor(jsref->obj);
+			//zval_dtor(jsref->obj);
 		}
 
 		/* then destroy JSRef */
