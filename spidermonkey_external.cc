@@ -54,6 +54,8 @@ void php_jsobject_set_property(JSContext *ctx, JSObject *obj, char *property_nam
 	PHPJS_END(ctx);
 }
 
+
+// call "PHP function" from JS and convert "return value of PHP func" to jsval
 /* all function calls are mapped through this unique function */
 JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 {
@@ -142,6 +144,8 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	} 
 	else 
 	{
+		//  convert "return value of PHP func" to jsval
+		
 		zval_to_jsval(&retval, cx, argv.rval().address());
 	}
 
@@ -313,7 +317,7 @@ JSBool JS_PropertySetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
 			jsval_to_zval(&val, cx, vp);
 
 			zend_update_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), &val);
-			zval_ptr_dtor(&val);
+			// zval_ptr_dtor(&val);
 
 			/* free prop name */
 			JS_free(cx, prop_name);
@@ -364,19 +368,16 @@ JSBool JS_PropertyGetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
                 }
             }
 
-			// todo:
-			// val = zend_read_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), 1);
+			val = zend_read_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), 1, NULL);
 
 			/* free prop name */
 			JS_free(cx, prop_name);
 
-			// todo:
-			// if (val != EG(uninitialized_zval_ptr)) {
-			// 	zval_add_ref(&val);
-			// 	zval_to_jsval(val, cx, vp.address());
-			// 	// zval_ptr_dtor(&val);
-			// 	return JS_TRUE;
-			// }
+			
+			if (val != &EG(uninitialized_zval)) {
+				zval_to_jsval(val, cx, vp.address());
+				return JS_TRUE;
+			}
 		}
 	}
 	
