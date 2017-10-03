@@ -98,6 +98,9 @@ PHP_METHOD(JSContext, registerClass)
 	}
 
 	JS_InitClass(intern->ct, intern->obj, nullptr, reClass, generic_constructor, 1, nullptr, nullptr, nullptr, nullptr);
+
+	efree(reClass);
+	
 	/* TODO: error management is needed here, we should throw an exception if the "name" entry
 	 *        already exists */
 	/*if (exported_name != NULL) {

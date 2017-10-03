@@ -163,8 +163,8 @@ static zend_object* php_jscontext_object_new(zend_class_entry *ce)
 	/* create global object for execution */
 	intern->obj = JS_NewGlobalObject(intern->ct, &intern->global_class, nullptr);
 
-	intern->cpt = JS_EnterCompartment(intern->ct, intern->obj);
 	JS_SetGlobalObject(intern->ct, intern->obj);
+	intern->cpt = JS_EnterCompartment(intern->ct, intern->obj);
 
 	/* initialize standard JS classes */
 	JS_InitStandardClasses(intern->ct, intern->obj);
