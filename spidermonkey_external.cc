@@ -99,7 +99,7 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 		jclass =&intern->global_class;
 	}
 	
-	if ((jsref = (php_jsobject_ref*)JS_GetPrivate(obj)) == nullptr)
+	if ((jsref = (php_jsobject_ref*)JS_GetInstancePrivate(cx, obj, jclass, NULL)) == NULL)
 	{
 		zend_throw_exception(zend_exception_get_default(TSRMLS_C), "Failed to retrieve function table", 0);
 	}

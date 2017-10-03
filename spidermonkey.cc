@@ -155,8 +155,8 @@ static zend_object* php_jscontext_object_new(zend_class_entry *ce)
 	JSAutoRequest ar(intern->ct);
 
 	/* says that our script runs in global scope */
-	JS_SetOptions(intern->ct, JSOPTION_VAROBJFIX | JSOPTION_ASMJS);
-
+	JS_SetOptions(intern->ct, JS_GetOptions(intern->ct) | JSOPTION_VAROBJFIX | JSOPTION_ASMJS);
+	
 	/* set the error callback */
 	JS_SetErrorReporter(intern->ct, reportError);
 
@@ -414,7 +414,7 @@ void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Va
 				}
 			}
 		} else {
-			if ((jsref = (php_jsobject_ref*)JS_GetPrivate(obj)) == NULL || jsref->obj == NULL)
+			if ((jsref = (php_jsobject_ref*)JS_GetInstancePrivate(ctx, obj, &intern->script_class, NULL)) == NULL || jsref->obj == NULL)
 			{
 				zobj = NULL;
 				while (parent != NULL) {
