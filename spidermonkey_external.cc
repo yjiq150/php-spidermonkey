@@ -144,23 +144,10 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	} 
 	else 
 	{
-		//  convert "return value of PHP func" to jsval
-		
+		//  convert "return value of PHP func" to jsval	
 		zval_to_jsval(&retval, cx, argv.rval().address());
 	}
 
-
-	// 참고: 예전코드
-	// if (retval != NULL)
-	// {
-		// zval_to_jsval(&retval, cx, argv.rval().address());
-		// zval_dtor(&retval);
-	// }
-	// else
-	// {
-	// 	argv.rval().get().setNull();
-	// }
-	
 	efree(params);
 
 	zend_string_release(func_name);
@@ -233,7 +220,7 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 		fcc.function_handler= ce->constructor;
 		fcc.calling_scope	= zend_get_executed_scope();
 		fcc.called_scope	= Z_OBJCE(cobj);
-		//fcc.called_scope	= ce; // todo: 이거랑 차이?
+		//fcc.called_scope	= ce; // todo: any difference to Z_OBJCE(cobj)?
 		fcc.object		= Z_OBJ(cobj);
 
 		if (zend_call_function(&fci, &fcc) == FAILURE)
@@ -242,7 +229,7 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 			for (i = 0; i < argc; i++)
 			{
 				zval *eval = &(params[i]);
-				zval_dtor(eval); // 어차피 나중에 efree 해줄 메모리인데 dtor가 필요한가?
+				zval_dtor(eval);
 			}
 			
 			efree(params);
@@ -317,7 +304,7 @@ JSBool JS_PropertySetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
 			jsval_to_zval(&val, cx, vp);
 
 			zend_update_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), &val);
-			// zval_ptr_dtor(&val);
+			zval_dtor(&val);
 
 			/* free prop name */
 			JS_free(cx, prop_name);
@@ -408,9 +395,6 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 			ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, zval_callback) {
 
 				php_callback *callback = (php_callback*)Z_PTR_P(zval_callback);
-
-				/* free the string used for the function name */
-				//zval_dtor(&callback->fci.function_name);
 				efree(callback);
 
 			} ZEND_HASH_FOREACH_END();
@@ -422,7 +406,7 @@ void JS_FinalizePHP(JSFreeOp *fop, JSObject *obj)
 		/* remove reference to object and call ptr dtor */
 		if (jsref->obj != NULL)
 		{
-			//zval_dtor(jsref->obj);
+			zval_dtor(jsref->obj);
 		}
 
 		/* then destroy JSRef */
