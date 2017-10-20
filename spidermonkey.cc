@@ -466,10 +466,13 @@ void _jsval_to_zval(zval *return_value, JSContext *ctx, JS::MutableHandle<JS::Va
 								_jsval_to_zval(&fval, ctx, JS::MutableHandleValue::fromMarkedLocation(&item_val), &jsthis);
 								/* Add property to our stdClass */
 								zend_update_property(NULL, return_value, name, strlen(name), &fval);
+											
+								zval_dtor(&fval);
 							}
 							JS_free(ctx, name);
 						}
 					}
+
 				} else {
 					RETVAL_ZVAL(zobj, 1, NULL);
 				}

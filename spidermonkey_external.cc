@@ -250,14 +250,14 @@ JSBool generic_constructor(JSContext *cx, unsigned argc, jsval *vp)
 		zval_to_jsval(&cobj, cx, argv.rval().address());
 	
 		efree(params);
+		zval_dtor(&cobj);
 	}
 	else
 	{
 		object_init_ex(&cobj, ce);
 		zval_to_jsval(&cobj, cx, argv.rval().address());
-	}
-
 	zval_dtor(&cobj);
+	}
 
 	zend_string_free(class_name);
 
