@@ -531,7 +531,8 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 			jsref = (php_jsobject_ref*)emalloc(sizeof(php_jsobject_ref));
 			/* store pointer to object */
-			SEPARATE_ARG_IF_REF(val);
+			// todo: is this necessary? this causes zend_object memory leak.
+			// SEPARATE_ARG_IF_REF(val);
 			jsref->ht = NULL;
 			jsref->obj = val;
 			/* auto define functions for stream */
@@ -572,7 +573,9 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			ALLOC_HASHTABLE(jsref->ht);
 			zend_hash_init(jsref->ht, 50, NULL, NULL, 0);
 
-			SEPARATE_ARG_IF_REF(val);
+			// todo: is this necessary? this causes zend_object memory leak.
+			// on FinalizePHP callback, ref count of val had changed to weird number.
+			//SEPARATE_ARG_IF_REF(val);
 
 			/* store pointer to object */
 			jsref->obj = val;
