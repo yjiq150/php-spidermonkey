@@ -27,6 +27,14 @@
  */
 zend_class_entry *php_spidermonkey_jsc_entry;
 
+// todo: might use zend_closure to fix closure error on test cases.
+// https://github.com/php/php-src/blob/1189fe572944932b4d517aa8039596fb1892d5b7/Zend/zend_closures.c
+/*
+PHP_METHOD(JSContext, registerClosure)
+{
+}
+*/
+
 /* {{{ proto public bool JSContext::registerFunction(string name, callback function)
    Register a PHP function in a Javascript context allowing a script to call it*/
 PHP_METHOD(JSContext, registerFunction)
