@@ -103,7 +103,6 @@ static void php_jscontext_object_free_storage(zend_object *object)
 
 static zend_object* php_jscontext_object_new(zend_class_entry *ce)
 {
-	zval *tmp;
 	php_jscontext_object *intern;
 
 	/* Allocate memory for it */

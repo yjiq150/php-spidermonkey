@@ -127,9 +127,7 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	callback->fci.param_count		= argc;
 	callback->fci.retval	= &retval;
 
-	// todo: cache 안쓸래?
-	// zend_call_function(&callback->fci, &callback->fci_cache);
-	zend_call_function(&callback->fci, NULL);
+	zend_call_function(&callback->fci, &callback->fci_cache);
 
 	/* call ended, clean */
 	for (i = 0; i < argc; i++)
@@ -149,7 +147,7 @@ JSBool generic_call(JSContext *cx, unsigned argc, jsval *vp)
 	}
 
 	efree(params);
-
+	zval_dtor(&retval);
 	zend_string_release(func_name);
 
 	return JS_TRUE;
@@ -300,7 +298,6 @@ JSBool JS_PropertySetterPHP(JSContext *cx, JS::Handle<JSObject*> obj, JS::Handle
 			/* because version 1.8.5 supports unicode, we must encode strings */
 			prop_name = JS_EncodeString(cx, str);
 
-			// MAKE_STD_ZVAL(val);
 			jsval_to_zval(&val, cx, vp);
 
 			zend_update_property(Z_OBJCE_P(jsref->obj), jsref->obj, prop_name, strlen(prop_name), &val);
