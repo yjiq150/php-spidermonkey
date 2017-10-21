@@ -496,7 +496,7 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 	zend_class_entry		*ce = NULL;
 	php_jscontext_object	*intern;
 	php_jsobject_ref		*jsref;
-	php_stream				*stream;
+	php_stream				*stream = NULL;
 
 	PHPJS_START(ctx);
 
@@ -524,7 +524,8 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 		case IS_FALSE:
 			*jval = BOOLEAN_TO_JSVAL(0);
 			break;
-		case IS_RESOURCE:
+		case IS_RESOURCE: {
+			
 			intern = (php_jscontext_object*)JS_GetContextPrivate(ctx);
 			/* create JSObject */
 			jobj = JS_NewObject(ctx, &intern->script_class, NULL, NULL);
@@ -536,7 +537,6 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 			jsref->ht = NULL;
 			jsref->obj = val;
 			/* auto define functions for stream */
-			php_stream *stream;
 			php_stream_from_zval_no_verify(stream, val);
 
 			if (stream != NULL) {
@@ -562,6 +562,8 @@ void zval_to_jsval(zval *val, JSContext *ctx, jsval *jval)
 
 			*jval = OBJECT_TO_JSVAL(jobj);
 			break;
+
+		}
 		case IS_OBJECT: {
 
 			intern = (php_jscontext_object*)JS_GetContextPrivate(ctx);
